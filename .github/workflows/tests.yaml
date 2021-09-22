@@ -1,0 +1,33 @@
+name: Run tests
+
+on: [push, pull_request]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Scan repo with kube-linter
+        continue-on-error: true
+        uses: stackrox/kube-linter-action@v1.0.4
+        with:
+          directory: policy/pod-replicas-below-one/test_data/unit
+          config: policy/kube-linter-config.yaml
+
+      - name: Download custom kube-linter
+        uses: wei/wget@v1
+        with:
+          args: -O kube-linter-rt https://github.com/garethahealy/kube-linter/releases/download/0.2.6-route_termination/kube-linter
+
+      - name: Download route-termination.yml
+        uses: wei/wget@v1
+        with:
+          args: https://raw.githubusercontent.com/garethahealy/kube-linter/main/tests/checks/route-termination.yml
+
+      - name: Run kube-linter with route-termination enabled
+        continue-on-error: true
+        run: |
+          sudo chmod +x kube-linter-rt
+          ./kube-linter-rt lint --include route-termination --do-not-auto-add-defaults route-termination.yml
